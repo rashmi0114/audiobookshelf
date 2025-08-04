@@ -1,0 +1,43 @@
+{
+  "user123": [
+    {
+      "type": "read",
+      "bookId": "book_001",
+      "timestamp": "2025-08-03T03:00:00.000Z"
+    },
+    {
+      "type": "complete",
+      "bookId": "book_002",
+      "timestamp": "2025-08-03T04:15:00.000Z"
+    }
+  ],
+  "user456": [
+    {
+      "type": "read",
+      "bookId": "book_003",
+      "timestamp": "2025-08-03T05:30:00.000Z"
+    }
+  ],
+  "user002": [
+    {
+      "type": "Started",
+      "bookId": "book456",
+      "timestamp": "2025-08-03T05:18:58.299Z"
+    },
+    {
+      "type": "Started",
+      "bookId": "book456",
+      "timestamp": "2025-08-04T00:50:38.159Z"
+    },
+    {
+      "type": "Started",
+      "bookId": "book456",
+      "timestamp": "2025-08-04T01:04:06.671Z"
+    },
+    {
+      "type": "Started",
+      "bookId": "book456",
+      "timestamp": "2025-08-04T01:05:15.218Z"
+    }
+  ]
+}

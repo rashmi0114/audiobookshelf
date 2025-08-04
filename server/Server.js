@@ -1,3 +1,4 @@
+//	Entry point
 const Path = require('path')
 const Sequelize = require('sequelize')
 const express = require('express')
@@ -23,6 +24,8 @@ const SocketAuthority = require('./SocketAuthority')
 const ApiRouter = require('./routers/ApiRouter')
 const HlsRouter = require('./routers/HlsRouter')
 const PublicRouter = require('./routers/PublicRouter')
+// Import achievements router defines under routers
+const achievementRoutes = require('./routers/achievements')
 
 const LogManager = require('./managers/LogManager')
 const EmailManager = require('./managers/EmailManager')
@@ -309,6 +312,8 @@ class Server {
 
     // Skip JSON parsing for internal-api routes
     router.use(/^(?!\/internal-api).*/, express.json({ limit: '10mb' }))
+
+    router.use('/api/achievements', this.auth.ifAuthNeeded(this.authMiddleware.bind(this)), achievementRoutes)
 
     router.use('/api', this.auth.ifAuthNeeded(this.authMiddleware.bind(this)), this.apiRouter.router)
     router.use('/hls', this.hlsRouter.router)
