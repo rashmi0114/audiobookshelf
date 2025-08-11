@@ -21,11 +21,39 @@ export default class LocalAudioPlayer extends EventEmitter {
 
     this.playableMimeTypes = []
 
+    // prevent duplicate completion dispatch per item
+    this._achievementFiredForItemId = null
+
     this.initialize()
   }
 
   get currentTrack() {
     return this.audioTracks[this.currentTrackIndex] || {}
+  }
+
+  // ✅ correct way to access the store from the component ctx
+  getStore() {
+    return this.ctx && this.ctx.$store ? this.ctx.$store : null
+  }
+
+  // fire completion achievement (idempotent per libraryItem.id for this player instance)
+  _dispatchCompletionAchievement() {
+    const store = this.getStore()
+    const item = this.libraryItem || {}
+    const itemId = item.id || this.currentTrack?.libraryItemId
+    if (!store || !store.dispatch || !itemId) return
+
+    if (this._achievementFiredForItemId === itemId) return
+    this._achievementFiredForItemId = itemId
+
+    const payload = {
+      itemId,
+      itemType: item.mediaType || 'audio',
+      title: item.title || this.currentTrack?.title || 'Item'
+    }
+
+    // Fire-and-forget; UI popup + persistence handled in the action
+    store.dispatch('achievements/recordCompletion', payload).catch(() => {})
   }
 
   initialize() {
@@ -76,13 +104,16 @@ export default class LocalAudioPlayer extends EventEmitter {
     } else {
       console.log(`[LocalPlayer] Ended`)
       this.emit('finished')
+
+      // 🎉 Trigger completion achievement (popup + badge award)
+      this._dispatchCompletionAchievement()
     }
   }
   evtError(error) {
     console.error('Player error', error)
     this.emit('error', error)
   }
-  evtLoadedMetadata(data) {
+  evtLoadedMetadata() {
     if (!this.isHlsTranscode) {
       this.player.currentTime = this.trackStartTime
     }
@@ -113,6 +144,9 @@ export default class LocalAudioPlayer extends EventEmitter {
     this.isHlsTranscode = isHlsTranscode
     this.playWhenReady = playWhenReady
     this.startTime = startTime
+
+    // reset per-item completion guard
+    this._achievementFiredForItemId = null
 
     if (this.hlsInstance) {
       this.destroyHlsInstance()
@@ -178,7 +212,6 @@ export default class LocalAudioPlayer extends EventEmitter {
         if (data.details === Hls.ErrorDetails.BUFFER_STALLED_ERROR) {
           console.error('[HLS] BUFFER STALLED ERROR')
         } else if (data.details === Hls.ErrorDetails.FRAG_LOAD_ERROR) {
-          // Only show error if the fragment is not being retried
           if (data.errorAction?.action !== 5) {
             console.error('[HLS] FRAG LOAD ERROR', data)
           }
@@ -263,20 +296,16 @@ export default class LocalAudioPlayer extends EventEmitter {
     this.playWhenReady = playWhenReady
 
     if (this.isHlsTranscode) {
-      // Seeking HLS stream
       var offsetTime = time - (this.currentTrack.startOffset || 0)
       this.player.currentTime = Math.max(0, offsetTime)
     } else {
-      // Seeking Direct play
       if (time < this.currentTrack.startOffset || time > this.currentTrack.startOffset + this.currentTrack.duration) {
-        // Change Track
         var trackIndex = this.audioTracks.findIndex((t) => time >= t.startOffset && time < t.startOffset + t.duration)
         if (trackIndex >= 0) {
           this.startTime = time
           this.currentTrackIndex = trackIndex
 
           if (!this.player.paused) {
-            // audio player playing so play when track loads
             this.playWhenReady = true
           }
           this.loadCurrentTrack()

@@ -1131,5 +1131,12 @@
   "ToastUserPasswordChangeSuccess": "Password changed successfully",
   "ToastUserPasswordMismatch": "Passwords do not match",
   "ToastUserPasswordMustChange": "New password cannot match old password",
-  "ToastUserRootRequireName": "Must enter a root username"
+  "ToastUserRootRequireName": "Must enter a root username",
+  "badges_title": "My Badges",
+  "total_completions": "Total completions",
+  "earned": "Earned",
+  "locked": "Locked",
+  "unlock_at": "Unlock at {count}",
+  "finished_title": "Finished: {title}",
+  "badge_earned": "{name} earned!"
 }

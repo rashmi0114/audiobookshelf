@@ -1,40 +1,57 @@
-//Manages reading/writing achievements to/from the local file system - Logic layer
-//fs Nodejs building modules which are lets you read/write files and create the file path
 const fs = require('fs')
 const path = require('path')
+const catalog = require('../utils/badges')
+const DB_FILE = path.join(process.cwd(), 'data', 'achievements.json')
 
-// where the achievements are saved
-const ACHIEVEMENT_FILE = path.join(__dirname, '../../data/achievements.json')
-
-//Reads the achievements.json file. Returns all data as a JS object
-function loadAchievements() {
-  if (!fs.existsSync(ACHIEVEMENT_FILE)) return {}
-  return JSON.parse(fs.readFileSync(ACHIEVEMENT_FILE, 'utf-8'))
+function ensureDirFor(filePath) {
+  const dir = path.dirname(filePath)
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true })
 }
 
-//Writes updated achievements back to the file.
-function saveAchievements(data) {
-  fs.writeFileSync(ACHIEVEMENT_FILE, JSON.stringify(data, null, 2))
-}
-
-module.exports = {
-  //Adds an achievement for the given user.
-  addAchievement(userId, achievement) {
-    const data = loadAchievements()
-    if (!data[userId]) data[userId] = []
-    data[userId].push({ ...achievement, timestamp: new Date().toISOString() })
-    saveAchievements(data)
-  },
-
-  //Returns all achievements of a user.
-  getUserAchievements(userId) {
-    const data = loadAchievements()
-    return data[userId] || []
-  },
-
-  //Checks if the user already has a specific achievement.
-  hasAchievement(userId, type, bookId) {
-    const data = loadAchievements()
-    return (data[userId] || []).some((a) => a.type === type && a.bookId === bookId)
+function readDb() {
+  try {
+    ensureDirFor(DB_FILE)
+    if (!fs.existsSync(DB_FILE)) return {}
+    return JSON.parse(fs.readFileSync(DB_FILE, 'utf-8') || '{}')
+  } catch {
+    return {}
   }
+}
+function writeDb(db) {
+  ensureDirFor(DB_FILE)
+  fs.writeFileSync(DB_FILE, JSON.stringify(db, null, 2))
+}
+function ensureUser(db, userId) {
+  if (!db[userId]) db[userId] = { total: 0, completed: {}, badges: [] }
+  return db[userId]
+}
+function computeNewBadges(total, existing) {
+  const earned = new Set(existing.map((b) => b.key))
+  const newly = []
+  for (const b of catalog) {
+    if (total >= b.count && !earned.has(b.key)) newly.push({ key: b.key, name: b.name, count: b.count })
+  }
+  return newly
+}
+
+exports.readUser = async (userId) => {
+  const db = readDb()
+  return ensureUser(db, userId)
+}
+
+exports.recordCompletion = async ({ userId, itemId, itemType, title }) => {
+  const db = readDb()
+  const u = ensureUser(db, userId)
+  if (!u.completed[itemId]) {
+    u.completed[itemId] = { itemType, title, at: Date.now() }
+    u.total += 1
+  }
+  const newly = computeNewBadges(u.total, u.badges)
+  if (newly.length) {
+    const existing = new Set(u.badges.map((b) => b.key))
+    for (const n of newly) if (!existing.has(n.key)) u.badges.push(n)
+  }
+  writeDb(db)
+  const highest = newly.length ? newly.reduce((a, b) => (a.count > b.count ? a : b)) : null
+  return { total: u.total, newlyAwardedBadges: newly, highest, state: u }
 }

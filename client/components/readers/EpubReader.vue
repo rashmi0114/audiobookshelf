@@ -41,6 +41,8 @@ export default {
       /** @type {ePub.Rendition} */
       rendition: null,
       chapters: [],
+      // prevent double-award on the same item within a session
+      _completionFired: false,
       ereaderSettings: {
         theme: 'dark',
         font: 'serif',
@@ -103,21 +105,13 @@ export default {
       const isDark = theme === 'dark'
       const isSepia = theme === 'sepia'
 
-      const fontColor = isDark
-        ? '#fff'
-        : isSepia
-        ? '#5b4636'
-        : '#000'
+      const fontColor = isDark ? '#fff' : isSepia ? '#5b4636' : '#000'
 
-      const backgroundColor = isDark
-        ? 'rgb(35 35 35)'
-        : isSepia
-        ? 'rgb(244, 236, 216)'
-        : 'rgb(255, 255, 255)'
+      const backgroundColor = isDark ? 'rgb(35 35 35)' : isSepia ? 'rgb(244, 236, 216)' : 'rgb(255, 255, 255)'
 
       const lineSpacing = this.ereaderSettings.lineSpacing / 100
-      const fontScale   = this.ereaderSettings.fontScale   / 100
-      const textStroke  = this.ereaderSettings.textStroke  / 100
+      const fontScale = this.ereaderSettings.fontScale / 100
+      const textStroke = this.ereaderSettings.textStroke / 100
 
       return {
         '*': {
@@ -133,6 +127,21 @@ export default {
     }
   },
   methods: {
+    // --- NEW: trigger completion once (popup + badges via store) ---
+    triggerCompletionOnce() {
+      if (this._completionFired || !this.libraryItemId) return
+      this._completionFired = true
+      const title = this.libraryItem?.title || 'Book'
+      // fire-and-forget; UI popup + persistence handled in the action
+      this.$store
+        .dispatch('achievements/recordCompletion', {
+          itemId: this.libraryItemId,
+          itemType: 'ebook',
+          title
+        })
+        .catch(() => {})
+    },
+
     updateSettings(settings) {
       this.ereaderSettings = settings
 
@@ -301,6 +310,7 @@ export default {
         return
       }
 
+      // persist progress if enabled
       if (location.end.percentage) {
         this.updateProgress({
           ebookLocation: location.start.cfi,
@@ -310,6 +320,12 @@ export default {
         this.updateProgress({
           ebookLocation: location.start.cfi
         })
+      }
+
+      // 🎉 Detect completion and trigger achievement once
+      const pct = location?.end?.percentage || 0
+      if (location?.atEnd || pct >= 0.999) {
+        this.triggerCompletionOnce()
       }
     },
     initEpub() {

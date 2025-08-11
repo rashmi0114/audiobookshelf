@@ -42,6 +42,13 @@
           </ui-tooltip>
         </nuxt-link>
 
+        <!-- 🔗 NEW: My Badges link -->
+        <nuxt-link to="/me/badges" class="hover:text-gray-200 cursor-pointer w-8 h-8 flex items-center justify-center mx-1">
+          <ui-tooltip text="My Badges" direction="bottom" class="flex items-center">
+            <span class="material-symbols text-2xl" aria-label="My Badges" role="button">emoji_events</span>
+          </ui-tooltip>
+        </nuxt-link>
+
         <nuxt-link to="/account" class="relative w-9 h-9 md:w-32 bg-fg border border-gray-500 rounded-sm shadow-xs ml-1.5 sm:ml-3 md:ml-5 md:pl-3 md:pr-10 py-2 text-left sm:text-sm cursor-pointer hover:bg-bg/40" aria-haspopup="listbox" aria-expanded="true">
           <span class="items-center hidden md:flex">
             <span class="block truncate">{{ username }}</span>
@@ -180,8 +187,6 @@ export default {
         action: 'rescan'
       })
 
-      // The limit of 50 is introduced because of the URL length. Each id has 36 chars, so 36 * 40 = 1440
-      // + 40 , separators = 1480 chars + base path 280 chars = 1760 chars. This keeps the URL under 2000 chars even with longer domains
       if (this.selectedMediaItems.length <= 40) {
         options.push({
           text: this.$strings.LabelDownload,

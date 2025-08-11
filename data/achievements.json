@@ -39,5 +39,32 @@
       "bookId": "book456",
       "timestamp": "2025-08-04T01:05:15.218Z"
     }
-  ]
+  ],
+  "032d5010-2bef-44c9-8f27-afad7f59b7d3": {
+    "total": 3,
+    "completed": {
+      "9bda2bb2-f6d3-472f-a66f-9cd995fda231": {
+        "itemType": "book",
+        "title": "Ava Max - So Am I [Official Music Video]-1.mp3",
+        "at": 1754783831762
+      },
+      "886feafa-5ba7-400a-8a5d-e5ec3edc9353": {
+        "itemType": "book",
+        "title": "B.o.B - Airplanes (feat. Hayley Williams of Paramore) [Official Video].mp3",
+        "at": 1754784711803
+      },
+      "a7c38dfa-752c-45c9-86ad-89ccd2f41db9": {
+        "itemType": "book",
+        "title": "Boy In Space - Caroline[Official Audio].mp3",
+        "at": 1754875170863
+      }
+    },
+    "badges": [
+      {
+        "key": "new_reader",
+        "name": "New Reader",
+        "count": 1
+      }
+    ]
+  }
 }
