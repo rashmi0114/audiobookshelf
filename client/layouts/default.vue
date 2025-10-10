@@ -377,6 +377,21 @@ export default {
       if (!provider?.id) return
       this.$store.commit('scanners/removeCustomMetadataProvider', provider)
     },
+    badgesUnlocked(data) {
+      // Update badges in store
+      this.$store.dispatch('badges/loadBadges')
+
+      // Show notification for each unlocked badge
+      data.badges.forEach((badgeId) => {
+        const badge = this.$store.getters['badges/getBadgeById'](badgeId)
+        if (badge) {
+          this.$toast.success(`🏆 Badge Unlocked: ${badge.name}!`, {
+            timeout: 5000,
+            position: 'top-right'
+          })
+        }
+      })
+    },
     initializeSocket() {
       if (this.$root.socket) {
         // Can happen in dev due to hot reload
@@ -475,6 +490,9 @@ export default {
       // Custom metadata provider Listeners
       this.socket.on('custom_metadata_provider_added', this.customMetadataProviderAdded)
       this.socket.on('custom_metadata_provider_removed', this.customMetadataProviderRemoved)
+
+      // Badge Listeners
+      this.socket.on('badges_unlocked', this.badgesUnlocked)
     },
     showUpdateToast(versionData) {
       var ignoreVersion = localStorage.getItem('ignoreVersion')
@@ -611,6 +629,7 @@ export default {
     window.addEventListener('keydown', this.keyDown)
 
     this.$store.dispatch('libraries/load')
+    this.$store.dispatch('badges/loadBadges')
 
     this.initLocalStorage()
 

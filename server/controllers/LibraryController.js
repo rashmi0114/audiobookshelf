@@ -24,6 +24,7 @@ const libraryFilters = require('../utils/queries/libraryFilters')
 const libraryItemsPodcastFilters = require('../utils/queries/libraryItemsPodcastFilters')
 const authorFilters = require('../utils/queries/authorFilters')
 const zipHelpers = require('../utils/zipHelpers')
+const BadgeManager = require('../managers/BadgeManager')
 
 /**
  * @typedef RequestUserObject
@@ -967,6 +968,14 @@ class LibraryController {
     const query = req.query.q.trim()
 
     const matches = await libraryItemFilters.search(req.user, req.library, query, limit)
+
+    // Update search count and check for search-related badge unlocks
+    await BadgeManager.updateUserStat(req.user, 'searchCount', 1)
+    await BadgeManager.checkAndUnlockBadges(req.user, 'searchPerformed', {
+      query: query,
+      resultCount: matches.length
+    })
+
     res.json(matches)
   }
 

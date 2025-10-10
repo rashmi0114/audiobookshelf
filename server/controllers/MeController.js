@@ -5,6 +5,7 @@ const Database = require('../Database')
 const { sort } = require('../libs/fastSort')
 const { toNumber, isNullOrNaN } = require('../utils/index')
 const userStats = require('../utils/queries/userStats')
+const BadgeManager = require('../managers/BadgeManager')
 
 /**
  * @typedef RequestUserObject
@@ -150,6 +151,14 @@ class MeController {
       return res.status(mediaProgressResponse.statusCode || 400).send(mediaProgressResponse.error)
     }
 
+    // Check for badge unlocks when an item is finished
+    if (progressUpdatePayload.isFinished) {
+      await BadgeManager.checkAndUnlockBadges(req.user, 'itemFinished', {
+        libraryItemId: req.params.libraryItemId,
+        episodeId: req.params.episodeId
+      })
+    }
+
     SocketAuthority.clientEmitter(req.user.id, 'user_updated', req.user.toOldJSONForBrowser())
     res.sendStatus(200)
   }
@@ -168,6 +177,8 @@ class MeController {
     }
 
     let hasUpdated = false
+    let hasFinishedItems = false
+
     for (const itemProgress of itemProgressPayloads) {
       const mediaProgressResponse = await req.user.createUpdateMediaProgressFromPayload(itemProgress)
       if (mediaProgressResponse.error) {
@@ -175,7 +186,15 @@ class MeController {
         continue
       } else {
         hasUpdated = true
+        if (itemProgress.isFinished) {
+          hasFinishedItems = true
+        }
       }
+    }
+
+    // Check for badge unlocks if any items were finished
+    if (hasFinishedItems) {
+      await BadgeManager.checkAndUnlockBadges(req.user, 'itemFinished', { batch: true })
     }
 
     if (hasUpdated) {
@@ -456,6 +475,42 @@ class MeController {
     res.json({
       ereaderDevices: Database.emailSettings.getEReaderDevices(req.user)
     })
+  }
+
+  /**
+   * GET: /api/me/badges
+   * Get user badges
+   *
+   * @param {RequestWithUser} req
+   * @param {Response} res
+   */
+  async getBadges(req, res) {
+    const badges = req.user.extraData?.badges || {}
+    res.json({ badges })
+  }
+
+  /**
+   * PATCH: /api/me/badges
+   * Update user badges
+   *
+   * @param {RequestWithUser} req
+   * @param {Response} res
+   */
+  async updateBadges(req, res) {
+    const { badges } = req.body
+    if (!badges || typeof badges !== 'object') {
+      return res.status(400).send('Invalid badges data')
+    }
+
+    const extraData = { ...req.user.extraData }
+    extraData.badges = { ...extraData.badges, ...badges }
+
+    req.user.extraData = extraData
+    req.user.changed('extraData', true)
+    await req.user.save()
+
+    SocketAuthority.clientEmitter(req.user.id, 'user_updated', req.user.toOldJSONForBrowser())
+    res.json({ badges: extraData.badges })
   }
 
   /**

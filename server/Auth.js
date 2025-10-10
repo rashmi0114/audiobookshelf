@@ -8,6 +8,7 @@ const Logger = require('./Logger')
 const TokenManager = require('./auth/TokenManager')
 const LocalAuthStrategy = require('./auth/LocalAuthStrategy')
 const OidcAuthStrategy = require('./auth/OidcAuthStrategy')
+const BadgeManager = require('./managers/BadgeManager')
 
 const RateLimiterFactory = require('./utils/rateLimiterFactory')
 const { escapeRegExp } = require('./utils')
@@ -295,6 +296,9 @@ class Auth {
     // Create tokens and session
     const { accessToken, refreshToken } = await this.tokenManager.createTokensAndSession(req.user, req)
 
+    // Record login for badge tracking
+    await BadgeManager.recordUserLogin(req.user)
+
     const userResponse = await this.getUserLoginResponsePayload(req.user)
 
     userResponse.user.refreshToken = returnTokens ? refreshToken : null
@@ -305,6 +309,9 @@ class Auth {
     if (!returnTokens) {
       this.tokenManager.setRefreshTokenCookie(req, res, refreshToken)
     }
+
+    // Check for login-related badge unlocks
+    await BadgeManager.checkAndUnlockBadges(req.user, 'userLogin')
 
     return userResponse
   }
